@@ -1,0 +1,26 @@
+2024-01-04 11:11:22,124 : INFO : loggerclass: Getjob API called successfully :
+2024-01-04 11:11:22,124 : INFO : loggerclass: Payload object created successfully :
+2024-01-04 11:11:22,124 : INFO : loggerclass: All header passed to server :
+2024-01-04 11:11:22,125 : INFO : loggerclass: Token printed for tracking,eyJhbGciOiJIUzI1NiIsImtpZCI6InNhbWVzcGFjZSIsInRva2VuVHlwZSI6IlNlcnZpY2UiLCJ0eXAiOiJKV1QifQ.eyJkZXZpY2VJZCI6IjE0NDEzIiwiZXhwIjoxNzA2NzcwOTA0LCJpYXQiOjE3MDQxNzg5MDQsImlzcyI6Imh0dHBzOi8vc3MuZGV2Iiwib3JnYW5pemF0aW9uIjp7ImNsaWVudFVybCI6ImF2ZW51ZS5zcy5kZXYiLCJpZCI6IjEwMDAwMDAwMDAwMDkiLCJsYWJlbCI6bnVsbCwibmFtZSI6IlNhbWVzcGFjZSBKb2IiLCJwcml2aWxlZ2VzIjp7ImFkbWluIjoxLCJjcmVhdG9yIjowfSwicHJvZHVjdCI6eyJpZCI6IjYiLCJuYW1lIjoiSm9iIn0sInJvdXRlIjoicjMiLCJzdGF0dXMiOiJBY3RpdmUiLCJzdG9yZXMiOlsiRlIiLCJCTSJdfSwic2Vzc2lvbklkIjoiZWRkODM1ZmQtMzBkNS00ZDUxLWI3MWEtMGYxMDk5YTIzYjIxIiwidXNlciI6eyJlbWFpbCI6ImthcnVuYS5nYXJqZUBzYW1lc3BhY2UuY29tIiwiZmlyc3ROYW1lIjoiS2FydW5hIiwiaWQiOiI0NDUxOTQ0NDAzNjEwOTM5NDUwIiwibGFzdE5hbWUiOiJHYXJqZSIsInN0YXR1cyI6IkFjdGl2ZSJ9fQ.nOMP0F_NV2Fbm2fM2xskZGNHYpcqhNGam86QwAZFr6Y :
+2024-01-04 11:11:23,396 : INFO : loggerclass: reponse object created for POST request and data sent to server :
+2024-01-04 11:11:23,396 : INFO : loggerclass: Assertion added to check response code 200 :
+2024-01-04 11:11:23,396 : INFO : loggerclass: Reponse converted into json format :
+2024-01-04 11:11:23,397 : INFO : loggerclass: Assertion added on content_type application/json :
+2024-01-04 11:11:23,397 : INFO : loggerclass: Assertion added on servername cloudflare :
+2024-01-04 11:11:23,397 : INFO : loggerclass: Assetion added to check elements in final response :
+2024-01-04 11:11:23,402 : INFO : loggerclass: URL called successfully for Addjob API :
+2024-01-04 11:11:23,403 : INFO : loggerclass: Payload object created with all data :
+2024-01-04 11:11:23,403 : INFO : loggerclass: converted data object in json formated string :
+2024-01-04 11:11:23,403 : INFO : loggerclass: headers object created with Authorization and Content-Type keys :
+2024-01-04 11:11:24,417 : INFO : loggerclass: API called using POST request and store into response object :
+2024-01-04 11:11:24,418 : INFO : loggerclass: converted json response into python type :
+2024-01-04 11:11:24,419 : INFO : loggerclass: Recevied response code as 200 :
+2024-01-04 11:11:24,435 : INFO : loggerclass: Job id 65964504f02ad11803235f94getting exactred from reponse of addjob API :
+2024-01-04 11:11:24,443 : INFO : loggerclass: Publish API url called successfully :
+2024-01-04 11:11:24,444 : INFO : loggerclass: Payload object created successfully :
+2024-01-04 11:11:24,444 : INFO : loggerclass: python payload converted into JSON supported string :
+2024-01-04 11:11:24,444 : INFO : loggerclass: headers object created with Authorization and Content-Type keys :
+2024-01-04 11:11:25,571 : INFO : loggerclass: API called using POST request and store into response object :
+2024-01-04 11:11:25,572 : INFO : loggerclass: Parse JSON content of http request :
+2024-01-04 11:11:25,573 : INFO : loggerclass: Published successfully {'data': {'publishJob': {'_id': '65964504f02ad11803235f94'}}} :
+2024-01-04 11:11:31,412 : INFO : loggerclass: Job deleted successfully {'data': {'deleteJob': '65964504f02ad11803235f94'}} :
