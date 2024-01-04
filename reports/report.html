@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>report.html</title>
+    <link href="assets/style.css" rel="stylesheet" type="text/css"/></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) { // eslint-disable-line no-redeclare
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function findAll(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sortColumn(elem) {
+    toggleSortStates(elem);
+    const colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    let key;
+    if (elem.classList.contains('result')) {
+        key = keyResult;
+    } else if (elem.classList.contains('links')) {
+        key = keyLink;
+    } else {
+        key = keyAlpha;
+    }
+    sortTable(elem, key(colIndex));
+}
+
+function showAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(showExtras);
+}
+
+function hideAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(hideExtras);
+}
+
+function showExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.remove('collapsed');
+    expandcollapse.classList.remove('expander');
+    expandcollapse.classList.add('collapser');
+}
+
+function hideExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.add('collapsed');
+    expandcollapse.classList.remove('collapser');
+    expandcollapse.classList.add('expander');
+}
+
+function showFilters() {
+    let visibleString = getQueryParameter('visible') || 'all';
+    visibleString = visibleString.toLowerCase();
+    const checkedItems = visibleString.split(',');
+
+    const filterItems = document.getElementsByClassName('filter');
+    for (let i = 0; i < filterItems.length; i++) {
+        filterItems[i].hidden = false;
+
+        if (visibleString != 'all') {
+            filterItems[i].checked = checkedItems.includes(filterItems[i].getAttribute('data-test-result'));
+            filterTable(filterItems[i]);
+        }
+    }
+}
+
+function addCollapse() {
+    // Add links for show/hide all
+    const resulttable = find('table#results-table');
+    const showhideall = document.createElement('p');
+    showhideall.innerHTML = '<a href="javascript:showAllExtras()">Show all details</a> / ' +
+                            '<a href="javascript:hideAllExtras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    findAll('.col-result').forEach(function(elem) {
+        const collapsed = getQueryParameter('collapsed') || 'Passed';
+        const extras = elem.parentNode.nextElementSibling;
+        const expandcollapse = document.createElement('span');
+        if (extras.classList.contains('collapsed')) {
+            expandcollapse.classList.add('expander');
+        } else if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add('collapsed');
+            expandcollapse.classList.add('expander');
+        } else {
+            expandcollapse.classList.add('collapser');
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener('click', function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains('collapsed')) {
+                showExtras(event.currentTarget);
+            } else {
+                hideExtras(event.currentTarget);
+            }
+        });
+    });
+}
+
+function getQueryParameter(name) {
+    const match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () { // eslint-disable-line no-unused-vars
+    resetSortHeaders();
+
+    addCollapse();
+
+    showFilters();
+
+    sortColumn(find('.initial-sort'));
+
+    findAll('.sortable').forEach(function(elem) {
+        elem.addEventListener('click',
+            function() {
+                sortColumn(elem);
+            }, false);
+    });
+}
+
+function sortTable(clicked, keyFunc) {
+    const rows = findAll('.results-table-row');
+    const reversed = !clicked.classList.contains('asc');
+    const sortedRows = sort(rows, keyFunc, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    const thead = document.getElementById('results-table-head');
+    document.getElementById('results-table').remove();
+    const parent = document.createElement('table');
+    parent.id = 'results-table';
+    parent.appendChild(thead);
+    sortedRows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName('BODY')[0].appendChild(parent);
+}
+
+function sort(items, keyFunc, reversed) {
+    const sortArray = items.map(function(item, i) {
+        return [keyFunc(item), i];
+    });
+
+    sortArray.sort(function(a, b) {
+        const keyA = a[0];
+        const keyB = b[0];
+
+        if (keyA == keyB) return 0;
+
+        if (reversed) {
+            return keyA < keyB ? 1 : -1;
+        } else {
+            return keyA > keyB ? 1 : -1;
+        }
+    });
+
+    return sortArray.map(function(item) {
+        const index = item[1];
+        return items[index];
+    });
+}
+
+function keyAlpha(colIndex) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[colIndex].firstChild.data.toLowerCase();
+    };
+}
+
+function keyLink(colIndex) {
+    return function(elem) {
+        const dataCell = elem.childNodes[1].childNodes[colIndex].firstChild;
+        return dataCell == null ? '' : dataCell.innerText.toLowerCase();
+    };
+}
+
+function keyResult(colIndex) {
+    return function(elem) {
+        const strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+            'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[colIndex].firstChild.data);
+    };
+}
+
+function resetSortHeaders() {
+    findAll('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    findAll('.sortable').forEach(function(elem) {
+        const icon = document.createElement('div');
+        icon.className = 'sort-icon';
+        icon.textContent = 'vvv';
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove('desc', 'active');
+        elem.classList.add('asc', 'inactive');
+    });
+}
+
+function toggleSortStates(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        resetSortHeaders();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function isAllRowsHidden(value) {
+    return value.hidden == false;
+}
+
+function filterTable(elem) { // eslint-disable-line no-unused-vars
+    const outcomeAtt = 'data-test-result';
+    const outcome = elem.getAttribute(outcomeAtt);
+    const classOutcome = outcome + ' results-table-row';
+    const outcomeRows = document.getElementsByClassName(classOutcome);
+
+    for(let i = 0; i < outcomeRows.length; i++){
+        outcomeRows[i].hidden = !elem.checked;
+    }
+
+    const rows = findAll('.results-table-row').filter(isAllRowsHidden);
+    const allRowsHidden = rows.length == 0 ? true : false;
+    const notFoundMessage = document.getElementById('not-found-message');
+    notFoundMessage.hidden = !allRowsHidden;
+}
+</script>
+    <h1>report.html</h1>
+    <p>Report generated on 04-Jan-2024 at 13:00:27 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v3.2.0</p>
+    <h2>Summary</h2>
+    <p>7 tests ran in 6.89 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="passed">7 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="failed">0 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable" col="duration">Duration</th>
+          <th class="sortable links" col="links">Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">testhire.py::Testhire::test_getalljobs</td>
+          <td class="col-duration">0.76</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stdout setup------------------------------ <br/>&lt;class &#x27;str&#x27;&gt;
+output:  {&quot;data&quot;: {&quot;signIn&quot;: {&quot;id&quot;: &quot;edd835fd-30d5-4d51-b71a-0f1099a23b21&quot;, &quot;user&quot;: {&quot;id&quot;: &quot;4451944403610939450&quot;, &quot;firstName&quot;: &quot;Karuna&quot;, &quot;lastName&quot;: &quot;Garje&quot;, &quot;email&quot;: &quot;karuna.garje@samespace.com&quot;, &quot;profileUri&quot;: &quot;https://imagedelivery.net/VyfuvVlSbLIpk_hnmnQjRg/3ca8ca39-0f68-4c4b-a98c-ff8397995600/public&quot;, &quot;token&quot;: {&quot;type&quot;: &quot;User&quot;, &quot;value&quot;: &quot;eyJhbGciOiJIUzI1NiIsImtpZCI6InNhbWVzcGFjZSIsInRva2VuVHlwZSI6IlVzZXIiLCJ0eXAiOiJKV1QifQ.eyJkZXZpY2VJZCI6IjE0NDEzIiwiZXhwIjoxNzA2NzcwOTA0LCJpYXQiOjE3MDQxNzg5MDQsImlzcyI6Imh0dHBzOi8vc3MuZGV2Iiwib3JnYW5pemF0aW9ucyI6W3siaWQiOiIxMDAwMDAwMDAwMDA5IiwibGFiZWwiOm51bGwsIm5hbWUiOiJTYW1lc3BhY2UgSm9iIiwicHJvZHVjdCI6eyJpZCI6IjYiLCJuYW1lIjoiSm9iIn0sInN0YXR1cyI6IkFjdGl2ZSJ9LHsiaWQiOiIxMDAwMDAwMDAwMDEyIiwibGFiZWwiOm51bGwsIm5hbWUiOiJBdmVudWUgVGVzdCIsInByb2R1Y3QiOnsiaWQiOiI2IiwibmFtZSI6IkpvYiJ9LCJzdGF0dXMiOiJBY3RpdmUifSx7ImlkIjoiMTAwMDAwMDAwMDAxMCIsImxhYmVsIjpudWxsLCJuYW1lIjoiU2FtZXNwYWNlIEluYyIsInByb2R1Y3QiOnsiaWQiOiI1IiwibmFtZSI6IlB1bHNlIn0sInN0YXR1cyI6IkFjdGl2ZSJ9LHsiaWQiOiIxMDAwMDAwMDAwMDEzIiwibGFiZWwiOm51bGwsIm5hbWUiOiIgUHVsc2UgUUEiLCJwcm9kdWN0Ijp7ImlkIjoiNSIsIm5hbWUiOiJQdWxzZSJ9LCJzdGF0dXMiOiJBY3RpdmUifV0sInNlc3Npb25JZCI6ImVkZDgzNWZkLTMwZDUtNGQ1MS1iNzFhLTBmMTA5OWEyM2IyMSIsInVzZXIiOnsiZW1haWwiOiJrYXJ1bmEuZ2FyamVAc2FtZXNwYWNlLmNvbSIsImZpcnN0TmFtZSI6IkthcnVuYSIsImlkIjoiNDQ1MTk0NDQwMzYxMDkzOTQ1MCIsImxhc3ROYW1lIjoiR2FyamUiLCJzdGF0dXMiOiJBY3RpdmUifX0.HJG-4rsp-iPu2K2hZfAM4NZJHN9HZ2Yig7efRgmWYk0&quot;, &quot;__typename&quot;: &quot;Token&quot;}, &quot;__typename&quot;: &quot;User&quot;}, &quot;organizations&quot;: [{&quot;id&quot;: &quot;1000000000010&quot;, &quot;name&quot;: &quot;Samespace Inc&quot;, &quot;label&quot;: null, &quot;lastActiveTimestamp&quot;: &quot;2024-01-04T05:53:02.219116Z&quot;, &quot;product&quot;: {&quot;id&quot;: &quot;5&quot;, &quot;name&quot;: &quot;Pulse&quot;, &quot;__typename&quot;: &quot;Work&quot;}, &quot;token&quot;: {&quot;type&quot;: &quot;Service&quot;, &quot;value&quot;: &quot;eyJhbGciOiJIUzI1NiIsImtpZCI6InNhbWVzcGFjZSIsInRva2VuVHlwZSI6IlNlcnZpY2UiLCJ0eXAiOiJKV1QifQ.eyJkZXZpY2VJZCI6IjE0NDEzIiwiZXhwIjoxNzA2NzgyMjgxLCJpYXQiOjE3MDQxOTAyODEsImlzcyI6Imh0dHBzOi8vc3MuZGV2Iiwib3JnYW5pemF0aW9uIjp7ImNsaWVudFVybCI6InB1bHNlLnNzLmRldiIsImlkIjoiMTAwMDAwMDAwMDAxMCIsImxhYmVsIjpudWxsLCJuYW1lIjoiU2FtZXNwYWNlIEluYyIsInByaXZpbGVnZXMiOnsiYWRtaW4iOjEsImRhc2hib2FyZCI6MCwiZ3JvdXBfZGFzaGJvYXJkIjowLCJ1c2VyIjowfSwicHJvZHVjdCI6eyJpZCI6IjUiLCJuYW1lIjoiUHVsc2UifSwicm91dGUiOiJyMyIsInN0YXR1cyI6IkFjdGl2ZSIsInN0b3JlcyI6WyJCTSIsIkZSIl19LCJzZXNzaW9uSWQiOiJlZGQ4MzVmZC0zMGQ1LTRkNTEtYjcxYS0wZjEwOTlhMjNiMjEiLCJ1c2VyIjp7ImVtYWlsIjoia2FydW5hLmdhcmplQHNhbWVzcGFjZS5jb20iLCJmaXJzdE5hbWUiOiJLYXJ1bmEiLCJpZCI6IjQ0NTE5NDQ0MDM2MTA5Mzk0NTAiLCJsYXN0TmFtZSI6IkdhcmplIiwic3RhdHVzIjoiQWN0aXZlIn19.RYvj8pl0Rye5LaxbtkeQNiehfXx6_HJjNLVX6PNqP5Q&quot;, &quot;__typename&quot;: &quot;Token&quot;}, &quot;status&quot;: &quot;Active&quot;, &quot;__typename&quot;: &quot;Org&quot;}, {&quot;id&quot;: &quot;1000000000009&quot;, &quot;name&quot;: &quot;Samespace Job&quot;, &quot;label&quot;: null, &quot;lastActiveTimestamp&quot;: &quot;2024-01-04T05:17:06.603557Z&quot;, &quot;product&quot;: {&quot;id&quot;: &quot;6&quot;, &quot;name&quot;: &quot;Job&quot;, &quot;__typename&quot;: &quot;Circle&quot;}, &quot;token&quot;: {&quot;type&quot;: &quot;Service&quot;, &quot;value&quot;: &quot;eyJhbGciOiJIUzI1NiIsImtpZCI6InNhbWVzcGFjZSIsInRva2VuVHlwZSI6IlNlcnZpY2UiLCJ0eXAiOiJKV1QifQ.eyJkZXZpY2VJZCI6IjE0NDEzIiwiZXhwIjoxNzA2NzcwOTA0LCJpYXQiOjE3MDQxNzg5MDQsImlzcyI6Imh0dHBzOi8vc3MuZGV2Iiwib3JnYW5pemF0aW9uIjp7ImNsaWVudFVybCI6ImF2ZW51ZS5zcy5kZXYiLCJpZCI6IjEwMDAwMDAwMDAwMDkiLCJsYWJlbCI6bnVsbCwibmFtZSI6IlNhbWVzcGFjZSBKb2IiLCJwcml2aWxlZ2VzIjp7ImFkbWluIjoxLCJjcmVhdG9yIjowfSwicHJvZHVjdCI6eyJpZCI6IjYiLCJuYW1lIjoiSm9iIn0sInJvdXRlIjoicjMiLCJzdGF0dXMiOiJBY3RpdmUiLCJzdG9yZXMiOlsiRlIiLCJCTSJdfSwic2Vzc2lvbklkIjoiZWRkODM1ZmQtMzBkNS00ZDUxLWI3MWEtMGYxMDk5YTIzYjIxIiwidXNlciI6eyJlbWFpbCI6ImthcnVuYS5nYXJqZUBzYW1lc3BhY2UuY29tIiwiZmlyc3ROYW1lIjoiS2FydW5hIiwiaWQiOiI0NDUxOTQ0NDAzNjEwOTM5NDUwIiwibGFzdE5hbWUiOiJHYXJqZSIsInN0YXR1cyI6IkFjdGl2ZSJ9fQ.nOMP0F_NV2Fbm2fM2xskZGNHYpcqhNGam86QwAZFr6Y&quot;, &quot;__typename&quot;: &quot;Token&quot;}, &quot;status&quot;: &quot;Active&quot;, &quot;__typename&quot;: &quot;Org&quot;}, {&quot;id&quot;: &quot;1000000000012&quot;, &quot;name&quot;: &quot;Avenue Test&quot;, &quot;label&quot;: null, &quot;lastActiveTimestamp&quot;: &quot;2024-01-03T07:27:23.866481Z&quot;, &quot;product&quot;: {&quot;id&quot;: &quot;6&quot;, &quot;name&quot;: &quot;Job&quot;, &quot;__typename&quot;: &quot;Circle&quot;}, &quot;token&quot;: {&quot;type&quot;: &quot;Service&quot;, &quot;value&quot;: null, &quot;__typename&quot;: &quot;Token&quot;}, &quot;status&quot;: &quot;Active&quot;, &quot;__typename&quot;: &quot;Org&quot;}, {&quot;id&quot;: &quot;1000000000013&quot;, &quot;name&quot;: &quot; Pulse QA&quot;, &quot;label&quot;: null, &quot;lastActiveTimestamp&quot;: &quot;2023-12-28T12:51:14.046588Z&quot;, &quot;product&quot;: {&quot;id&quot;: &quot;5&quot;, &quot;name&quot;: &quot;Pulse&quot;, &quot;__typename&quot;: &quot;Work&quot;}, &quot;token&quot;: {&quot;type&quot;: &quot;Service&quot;, &quot;value&quot;: null, &quot;__typename&quot;: &quot;Token&quot;}, &quot;status&quot;: &quot;Active&quot;, &quot;__typename&quot;: &quot;Org&quot;}], &quot;resetPasswordToken&quot;: null, &quot;__typename&quot;: &quot;Session&quot;}}}
+eyJhbGciOiJIUzI1NiIsImtpZCI6InNhbWVzcGFjZSIsInRva2VuVHlwZSI6IlNlcnZpY2UiLCJ0eXAiOiJKV1QifQ.eyJkZXZpY2VJZCI6IjE0NDEzIiwiZXhwIjoxNzA2NzgyMjgxLCJpYXQiOjE3MDQxOTAyODEsImlzcyI6Imh0dHBzOi8vc3MuZGV2Iiwib3JnYW5pemF0aW9uIjp7ImNsaWVudFVybCI6InB1bHNlLnNzLmRldiIsImlkIjoiMTAwMDAwMDAwMDAxMCIsImxhYmVsIjpudWxsLCJuYW1lIjoiU2FtZXNwYWNlIEluYyIsInByaXZpbGVnZXMiOnsiYWRtaW4iOjEsImRhc2hib2FyZCI6MCwiZ3JvdXBfZGFzaGJvYXJkIjowLCJ1c2VyIjowfSwicHJvZHVjdCI6eyJpZCI6IjUiLCJuYW1lIjoiUHVsc2UifSwicm91dGUiOiJyMyIsInN0YXR1cyI6IkFjdGl2ZSIsInN0b3JlcyI6WyJCTSIsIkZSIl19LCJzZXNzaW9uSWQiOiJlZGQ4MzVmZC0zMGQ1LTRkNTEtYjcxYS0wZjEwOTlhMjNiMjEiLCJ1c2VyIjp7ImVtYWlsIjoia2FydW5hLmdhcmplQHNhbWVzcGFjZS5jb20iLCJmaXJzdE5hbWUiOiJLYXJ1bmEiLCJpZCI6IjQ0NTE5NDQ0MDM2MTA5Mzk0NTAiLCJsYXN0TmFtZSI6IkdhcmplIiwic3RhdHVzIjoiQWN0aXZlIn19.RYvj8pl0Rye5LaxbtkeQNiehfXx6_HJjNLVX6PNqP5Q
+<br/> ------------------------------Captured stdout call------------------------------ <br/>{&#x27;data&#x27;: {&#x27;getJobs&#x27;: []}}
+Test Run Successful
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     loggerclass:testhire.py:24 Getjob API called successfully
+INFO     loggerclass:testhire.py:27 Payload object created successfully
+INFO     loggerclass:testhire.py:35 All header passed to server
+INFO     loggerclass:testhire.py:38 Token printed for tracking,eyJhbGciOiJIUzI1NiIsImtpZCI6InNhbWVzcGFjZSIsInRva2VuVHlwZSI6IlNlcnZpY2UiLCJ0eXAiOiJKV1QifQ.eyJkZXZpY2VJZCI6IjE0NDEzIiwiZXhwIjoxNzA2NzgyMjgxLCJpYXQiOjE3MDQxOTAyODEsImlzcyI6Imh0dHBzOi8vc3MuZGV2Iiwib3JnYW5pemF0aW9uIjp7ImNsaWVudFVybCI6InB1bHNlLnNzLmRldiIsImlkIjoiMTAwMDAwMDAwMDAxMCIsImxhYmVsIjpudWxsLCJuYW1lIjoiU2FtZXNwYWNlIEluYyIsInByaXZpbGVnZXMiOnsiYWRtaW4iOjEsImRhc2hib2FyZCI6MCwiZ3JvdXBfZGFzaGJvYXJkIjowLCJ1c2VyIjowfSwicHJvZHVjdCI6eyJpZCI6IjUiLCJuYW1lIjoiUHVsc2UifSwicm91dGUiOiJyMyIsInN0YXR1cyI6IkFjdGl2ZSIsInN0b3JlcyI6WyJCTSIsIkZSIl19LCJzZXNzaW9uSWQiOiJlZGQ4MzVmZC0zMGQ1LTRkNTEtYjcxYS0wZjEwOTlhMjNiMjEiLCJ1c2VyIjp7ImVtYWlsIjoia2FydW5hLmdhcmplQHNhbWVzcGFjZS5jb20iLCJmaXJzdE5hbWUiOiJLYXJ1bmEiLCJpZCI6IjQ0NTE5NDQ0MDM2MTA5Mzk0NTAiLCJsYXN0TmFtZSI6IkdhcmplIiwic3RhdHVzIjoiQWN0aXZlIn19.RYvj8pl0Rye5LaxbtkeQNiehfXx6_HJjNLVX6PNqP5Q
+INFO     loggerclass:testhire.py:45 reponse object created for POST request and data sent to server
+INFO     loggerclass:testhire.py:48 Assertion added to check response code 200
+INFO     loggerclass:testhire.py:50 Reponse converted into json format
+INFO     loggerclass:testhire.py:54 Assertion added on content_type application/json
+INFO     loggerclass:testhire.py:57 Assertion added on servername cloudflare
+INFO     loggerclass:testhire.py:60 Assetion added to check elements in final response<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">testhire.py::Testhire::test_addjob</td>
+          <td class="col-duration">0.91</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Test Leaders
+Received the error in response: A Job with the same title already exist
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     loggerclass:testhire.py:71 URL called successfully for Addjob API
+INFO     loggerclass:testhire.py:85 Payload object created with all data
+INFO     loggerclass:testhire.py:87 converted data object in json formated string
+INFO     loggerclass:testhire.py:93 headers object created with Authorization and Content-Type keys
+INFO     loggerclass:testhire.py:95 API called using POST request and store into response object
+INFO     loggerclass:testhire.py:98 converted json response into python type
+ERROR    loggerclass:testhire.py:105 Error received in the response:A Job with the same title already exist<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">testhire.py::Testhire::test_publishjob</td>
+          <td class="col-duration">1.10</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>{&#x27;errors&#x27;: [{&#x27;message&#x27;: &quot;Cannot read properties of undefined (reading &#x27;jobId&#x27;)&quot;, &#x27;locations&#x27;: [{&#x27;line&#x27;: 3, &#x27;column&#x27;: 5}], &#x27;path&#x27;: [&#x27;publishJob&#x27;], &#x27;extensions&#x27;: {&#x27;code&#x27;: &#x27;INTERNAL_SERVER_ERROR&#x27;, &#x27;exception&#x27;: {&#x27;stacktrace&#x27;: [&quot;TypeError: Cannot read properties of undefined (reading &#x27;jobId&#x27;)&quot;, &#x27;    at fieldConfig.resolve (/opt/samespace/hub/jobs-api/src/directive/access.js:44:48)&#x27;, &#x27;    at field.resolve (/opt/samespace/hub/jobs-api/node_modules/apollo-server-core/dist/utils/schemaInstrumentation.js:56:26)&#x27;, &#x27;    at resolveField (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:464:18)&#x27;, &#x27;    at /opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:261:18&#x27;, &#x27;    at /opt/samespace/hub/jobs-api/node_modules/graphql/jsutils/promiseReduce.js:23:10&#x27;, &#x27;    at Array.reduce (&lt;anonymous&gt;)&#x27;, &#x27;    at promiseReduce (/opt/samespace/hub/jobs-api/node_modules/graphql/jsutils/promiseReduce.js:20:17)&#x27;, &#x27;    at executeFieldsSerially (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:258:37)&#x27;, &#x27;    at executeOperation (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:236:55)&#x27;, &#x27;    at executeImpl (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:116:14)&#x27;]}}}], &#x27;data&#x27;: {&#x27;publishJob&#x27;: None}}
+API run successfully
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     loggerclass:testhire.py:130 Publish API url called successfully
+INFO     loggerclass:testhire.py:138 Payload object created successfully
+INFO     loggerclass:testhire.py:141 python payload converted into JSON supported string
+INFO     loggerclass:testhire.py:147 headers object created with Authorization and Content-Type keys
+INFO     loggerclass:testhire.py:149 API called using POST request and store into response object
+INFO     loggerclass:testhire.py:151 Parse JSON content of http request
+INFO     loggerclass:testhire.py:155 Published successfully {&#x27;errors&#x27;: [{&#x27;message&#x27;: &quot;Cannot read properties of undefined (reading &#x27;jobId&#x27;)&quot;, &#x27;locations&#x27;: [{&#x27;line&#x27;: 3, &#x27;column&#x27;: 5}], &#x27;path&#x27;: [&#x27;publishJob&#x27;], &#x27;extensions&#x27;: {&#x27;code&#x27;: &#x27;INTERNAL_SERVER_ERROR&#x27;, &#x27;exception&#x27;: {&#x27;stacktrace&#x27;: [&quot;TypeError: Cannot read properties of undefined (reading &#x27;jobId&#x27;)&quot;, &#x27;    at fieldConfig.resolve (/opt/samespace/hub/jobs-api/src/directive/access.js:44:48)&#x27;, &#x27;    at field.resolve (/opt/samespace/hub/jobs-api/node_modules/apollo-server-core/dist/utils/schemaInstrumentation.js:56:26)&#x27;, &#x27;    at resolveField (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:464:18)&#x27;, &#x27;    at /opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:261:18&#x27;, &#x27;    at /opt/samespace/hub/jobs-api/node_modules/graphql/jsutils/promiseReduce.js:23:10&#x27;, &#x27;    at Array.reduce (&lt;anonymous&gt;)&#x27;, &#x27;    at promiseReduce (/opt/samespace/hub/jobs-api/node_modules/graphql/jsutils/promiseReduce.js:20:17)&#x27;, &#x27;    at executeFieldsSerially (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:258:37)&#x27;, &#x27;    at executeOperation (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:236:55)&#x27;, &#x27;    at executeImpl (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:116:14)&#x27;]}}}], &#x27;data&#x27;: {&#x27;publishJob&#x27;: None}}<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">testhire.py::Testhire::test_makedraft</td>
+          <td class="col-duration">0.89</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>{&quot;errors&quot;:[{&quot;message&quot;:&quot;Bad data provided!&quot;,&quot;locations&quot;:[{&quot;line&quot;:2,&quot;column&quot;:22}],&quot;extensions&quot;:{&quot;code&quot;:&quot;BAD_USER_INPUT&quot;,&quot;exception&quot;:{&quot;stacktrace&quot;:[&quot;GraphQLError: Variable \&quot;$jobId\&quot; of non-null type \&quot;String!\&quot; must not be null.&quot;,&quot;    at _loop (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/values.js:105:15)&quot;,&quot;    at coerceVariableValues (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/values.js:121:16)&quot;,&quot;    at getVariableValues (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/values.js:50:19)&quot;,&quot;    at buildExecutionContext (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:203:61)&quot;,&quot;    at executeImpl (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:101:20)&quot;,&quot;    at execute (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:60:35)&quot;,&quot;    at execute (/opt/samespace/hub/jobs-api/node_modules/apollo-server-core/dist/requestPipeline.js:207:48)&quot;,&quot;    at processGraphQLRequest (/opt/samespace/hub/jobs-api/node_modules/apollo-server-core/dist/requestPipeline.js:150:34)&quot;,&quot;    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)&quot;,&quot;    at async processHTTPRequest (/opt/samespace/hub/jobs-api/node_modules/apollo-server-core/dist/runHttpQuery.js:222:30)&quot;]}}}]}
+
+
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">testhire.py::Testhire::test_getjob</td>
+          <td class="col-duration">0.59</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>None
+{&#x27;errors&#x27;: [{&#x27;message&#x27;: &quot;Cannot read properties of undefined (reading &#x27;jobId&#x27;)&quot;, &#x27;locations&#x27;: [{&#x27;line&#x27;: 3, &#x27;column&#x27;: 5}], &#x27;path&#x27;: [&#x27;getJob&#x27;], &#x27;extensions&#x27;: {&#x27;code&#x27;: &#x27;INTERNAL_SERVER_ERROR&#x27;, &#x27;exception&#x27;: {&#x27;stacktrace&#x27;: [&quot;TypeError: Cannot read properties of undefined (reading &#x27;jobId&#x27;)&quot;, &#x27;    at fieldConfig.resolve (/opt/samespace/hub/jobs-api/src/directive/access.js:44:48)&#x27;, &#x27;    at field.resolve (/opt/samespace/hub/jobs-api/node_modules/apollo-server-core/dist/utils/schemaInstrumentation.js:56:26)&#x27;, &#x27;    at resolveField (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:464:18)&#x27;, &#x27;    at executeFields (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:292:18)&#x27;, &#x27;    at executeOperation (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:236:122)&#x27;, &#x27;    at executeImpl (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:116:14)&#x27;, &#x27;    at execute (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:60:35)&#x27;, &#x27;    at execute (/opt/samespace/hub/jobs-api/node_modules/apollo-server-core/dist/requestPipeline.js:207:48)&#x27;, &#x27;    at processGraphQLRequest (/opt/samespace/hub/jobs-api/node_modules/apollo-server-core/dist/requestPipeline.js:150:34)&#x27;, &#x27;    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)&#x27;]}}}], &#x27;data&#x27;: {&#x27;getJob&#x27;: None}}
+third
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">testhire.py::Testhire::test_jobinsights</td>
+          <td class="col-duration">1.61</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>Here is all job insights {&#x27;data&#x27;: {&#x27;getJobInsights&#x27;: {&#x27;insights&#x27;: []}}}
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">testhire.py::Testhire::test_deletejob</td>
+          <td class="col-duration">0.93</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>{&#x27;errors&#x27;: [{&#x27;message&#x27;: &#x27;Bad data provided!&#x27;, &#x27;locations&#x27;: [{&#x27;line&#x27;: 2, &#x27;column&#x27;: 22}], &#x27;extensions&#x27;: {&#x27;code&#x27;: &#x27;BAD_USER_INPUT&#x27;, &#x27;exception&#x27;: {&#x27;stacktrace&#x27;: [&#x27;GraphQLError: Variable &quot;$jobId&quot; of non-null type &quot;String!&quot; must not be null.&#x27;, &#x27;    at _loop (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/values.js:105:15)&#x27;, &#x27;    at coerceVariableValues (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/values.js:121:16)&#x27;, &#x27;    at getVariableValues (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/values.js:50:19)&#x27;, &#x27;    at buildExecutionContext (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:203:61)&#x27;, &#x27;    at executeImpl (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:101:20)&#x27;, &#x27;    at execute (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:60:35)&#x27;, &#x27;    at execute (/opt/samespace/hub/jobs-api/node_modules/apollo-server-core/dist/requestPipeline.js:207:48)&#x27;, &#x27;    at processGraphQLRequest (/opt/samespace/hub/jobs-api/node_modules/apollo-server-core/dist/requestPipeline.js:150:34)&#x27;, &#x27;    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)&#x27;, &#x27;    at async processHTTPRequest (/opt/samespace/hub/jobs-api/node_modules/apollo-server-core/dist/runHttpQuery.js:222:30)&#x27;]}}}]}
+<br/> -------------------------------Captured log call-------------------------------- <br/>INFO     loggerclass:testhire.py:260 Job deleted successfully {&#x27;errors&#x27;: [{&#x27;message&#x27;: &#x27;Bad data provided!&#x27;, &#x27;locations&#x27;: [{&#x27;line&#x27;: 2, &#x27;column&#x27;: 22}], &#x27;extensions&#x27;: {&#x27;code&#x27;: &#x27;BAD_USER_INPUT&#x27;, &#x27;exception&#x27;: {&#x27;stacktrace&#x27;: [&#x27;GraphQLError: Variable &quot;$jobId&quot; of non-null type &quot;String!&quot; must not be null.&#x27;, &#x27;    at _loop (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/values.js:105:15)&#x27;, &#x27;    at coerceVariableValues (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/values.js:121:16)&#x27;, &#x27;    at getVariableValues (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/values.js:50:19)&#x27;, &#x27;    at buildExecutionContext (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:203:61)&#x27;, &#x27;    at executeImpl (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:101:20)&#x27;, &#x27;    at execute (/opt/samespace/hub/jobs-api/node_modules/graphql/execution/execute.js:60:35)&#x27;, &#x27;    at execute (/opt/samespace/hub/jobs-api/node_modules/apollo-server-core/dist/requestPipeline.js:207:48)&#x27;, &#x27;    at processGraphQLRequest (/opt/samespace/hub/jobs-api/node_modules/apollo-server-core/dist/requestPipeline.js:150:34)&#x27;, &#x27;    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)&#x27;, &#x27;    at async processHTTPRequest (/opt/samespace/hub/jobs-api/node_modules/apollo-server-core/dist/runHttpQuery.js:222:30)&#x27;]}}}]}<br/></div></td></tr></tbody></table></body></html>
