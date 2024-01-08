@@ -172,6 +172,6 @@
 2024-01-04 13:21:35,086 : INFO : loggerclass: python payload converted into JSON supported string :
 2024-01-04 13:21:35,086 : INFO : loggerclass: headers object created with Authorization and Content-Type keys :
 2024-01-04 13:21:35,895 : INFO : loggerclass: API called using POST request and store into response object :
-2024-01-04 13:21:35,895 : INFO : loggerclass: Parse JSON content of http request :
+2024-01-04 13:21:35,895 : INFO : loggerclass: Parse JSON content of http request ::
 2024-01-04 13:21:35,896 : INFO : loggerclass: Published successfully {'data': {'publishJob': {'_id': '65966386f02ad15fc0235f9d'}}} :
 2024-01-04 13:21:40,623 : INFO : loggerclass: Job deleted successfully {'data': {'deleteJob': '65966386f02ad15fc0235f9d'}} :
